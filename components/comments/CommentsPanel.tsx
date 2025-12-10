@@ -9,13 +9,18 @@ import { usePlayerStore } from '@/stores/playerStore';
 import type { RedditComment } from '@/types';
 
 async function fetchComments(subreddit: string, postId: string): Promise<RedditComment[]> {
-  const params = new URLSearchParams({ subreddit, postId });
-  const res = await fetch(`/api/reddit/comments?${params.toString()}`);
+  // Fetch directly from Reddit (client-side) to avoid Vercel server blocks
+  const res = await fetch(
+    `https://www.reddit.com/r/${subreddit}/comments/${postId}.json?raw_json=1`
+  );
   if (!res.ok) {
     throw new Error('Failed to fetch comments');
   }
   const data = await res.json();
-  return data.comments;
+  const children = data[1]?.data?.children || [];
+  return children
+    .filter((child: { kind: string }) => child.kind === 't1')
+    .map((child: { data: RedditComment }) => child.data);
 }
 
 export function CommentsPanel() {
