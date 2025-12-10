@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef } from "react";
-import YouTube, { YouTubePlayer, YouTubeEvent } from "react-youtube";
-import { toast } from "sonner";
-import { usePlayerStore } from "@/stores/playerStore";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useRef } from 'react';
+import YouTube, { YouTubePlayer, YouTubeEvent } from 'react-youtube';
+import { toast } from 'sonner';
+import { usePlayerStore } from '@/stores/playerStore';
+import { cn } from '@/lib/utils';
 
 // Extract YouTube video ID from URL
 function getYouTubeId(url: string): string | null {
@@ -29,6 +29,8 @@ export function VideoPlayer({ className }: VideoPlayerProps = {}) {
     setCurrentTime,
     clearSeek,
     next,
+    play,
+    pause,
   } = usePlayerStore();
 
   const playerRef = useRef<YouTubePlayer | null>(null);
@@ -125,19 +127,32 @@ export function VideoPlayer({ className }: VideoPlayerProps = {}) {
   const handleError = useCallback(
     (event: YouTubeEvent) => {
       const errorMessages: Record<number, string> = {
-        2: "Invalid video ID",
-        5: "Video cannot be played in embedded player",
-        100: "Video not found or removed",
-        101: "Video cannot be embedded",
-        150: "Video cannot be embedded",
+        2: 'Invalid video ID',
+        5: 'Video cannot be played in embedded player',
+        100: 'Video not found or removed',
+        101: 'Video cannot be embedded',
+        150: 'Video cannot be embedded',
       };
-      const message = errorMessages[event.data] || "Video playback error";
-      toast.error("Skipping track", {
+      const message = errorMessages[event.data] || 'Video playback error';
+      toast.error('Skipping track', {
         description: message,
       });
       next();
     },
     [next]
+  );
+
+  const handleStateChange = useCallback(
+    (event: YouTubeEvent) => {
+      const state = event.data;
+      // YouTube states: 1 = playing, 2 = paused
+      if (state === 1 && !isPlaying) {
+        play();
+      } else if (state === 2 && isPlaying) {
+        pause();
+      }
+    },
+    [isPlaying, play, pause]
   );
 
   if (!currentTrack) {
@@ -152,22 +167,32 @@ export function VideoPlayer({ className }: VideoPlayerProps = {}) {
 
   if (!videoId) {
     return (
-      <div className={cn("aspect-video bg-muted flex items-center justify-center rounded-lg", className)}>
+      <div
+        className={cn(
+          'aspect-video bg-muted flex items-center justify-center rounded-lg',
+          className
+        )}
+      >
         <p className="text-muted-foreground">Invalid video URL</p>
       </div>
     );
   }
 
   return (
-    <div className={cn("aspect-video bg-black rounded-lg overflow-hidden", className)}>
+    <div
+      className={cn(
+        'aspect-video bg-black rounded-lg overflow-hidden',
+        className
+      )}
+    >
       <YouTube
         videoId={videoId}
         title={`Now playing: ${currentTrack.title}`}
         className="w-full h-full"
         iframeClassName="w-full h-full"
         opts={{
-          width: "100%",
-          height: "100%",
+          width: '100%',
+          height: '100%',
           playerVars: {
             autoplay: 0,
             modestbranding: 1,
@@ -178,6 +203,7 @@ export function VideoPlayer({ className }: VideoPlayerProps = {}) {
         onReady={handleReady}
         onEnd={handleEnd}
         onError={handleError}
+        onStateChange={handleStateChange}
       />
     </div>
   );
