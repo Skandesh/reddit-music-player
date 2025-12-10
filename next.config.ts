@@ -1,7 +1,16 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      { hostname: 'i.redd.it' },
+      { hostname: 'preview.redd.it' },
+      { hostname: 'i.ytimg.com' },
+    ],
+  },
+  experimental: {
+    optimizeCss: true,
+  },
 };
 
 export default nextConfig;
