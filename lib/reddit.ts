@@ -1,6 +1,7 @@
 import type { RedditPost, RedditComment, SortMethod, TimePeriod } from "@/types";
 
 const REDDIT_BASE = "https://www.reddit.com";
+const USER_AGENT = "web:reddit-music-player:v1.0.0 (by /u/music-player-bot)";
 
 export class RedditApiError extends Error {
   constructor(
@@ -42,7 +43,10 @@ export async function getSubredditPosts(
 
   const res = await fetch(
     `${REDDIT_BASE}/r/${subreddit}/${sort}.json?${params.toString()}`,
-    { next: { revalidate: 300 } }
+    {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: 300 },
+    }
   );
 
   if (!res.ok) {
@@ -70,7 +74,10 @@ export async function getPostComments(
 ): Promise<RedditComment[]> {
   const res = await fetch(
     `${REDDIT_BASE}/r/${subreddit}/comments/${postId}.json?raw_json=1`,
-    { next: { revalidate: 60 } }
+    {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: 60 },
+    }
   );
 
   if (!res.ok) {
@@ -132,7 +139,10 @@ export async function searchSubreddit(
 
   const res = await fetch(
     `${REDDIT_BASE}/r/${subreddit}/search.json?${params.toString()}`,
-    { next: { revalidate: 60 } }
+    {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: 60 },
+    }
   );
 
   if (!res.ok) {
