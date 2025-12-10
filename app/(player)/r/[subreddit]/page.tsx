@@ -1,9 +1,8 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { getSubredditPosts, filterMusicPosts } from "@/lib/reddit";
 import { buildQueue } from "@/lib/youtube";
 import { SubredditView } from "@/components/subreddit/SubredditView";
-import type { SortMethod, TimePeriod } from "@/types";
+import type { SortMethod, TimePeriod, QueueItem } from "@/types";
 
 interface Props {
   params: Promise<{ subreddit: string }>;
@@ -28,13 +27,14 @@ export default async function SubredditPage({ params, searchParams }: Props) {
   const { subreddit } = await params;
   const { sort = "hot", t = "week" } = await searchParams;
 
-  let queue;
+  let queue: QueueItem[] = [];
   try {
     const { posts } = await getSubredditPosts(subreddit, sort, 50, t);
     const musicPosts = filterMusicPosts(posts);
     queue = buildQueue(musicPosts);
   } catch {
-    notFound();
+    // Server-side fetch failed (e.g., Reddit blocked Vercel IPs)
+    // Pass empty queue and let client-side handle fetching
   }
 
   return (

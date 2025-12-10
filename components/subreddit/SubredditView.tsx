@@ -32,13 +32,40 @@ export function SubredditView({
   const { queue, setQueue, currentTrack } = usePlayerStore();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(initialQueue.length === 0);
+  const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
 
-  // Set queue when subreddit changes
+  // Set queue when subreddit changes, or fetch client-side if server-side failed
   useEffect(() => {
     if (initialQueue.length > 0) {
       setQueue(initialQueue);
+      setIsInitialLoading(false);
+    } else {
+      // Server-side fetch failed, try client-side
+      const fetchClientSide = async () => {
+        setIsInitialLoading(true);
+        setInitialLoadError(null);
+        try {
+          const currentSort = (searchParams.get("sort") as SortMethod) || initialSort;
+          const currentTime = (searchParams.get("t") as TimePeriod) || initialTime;
+
+          const { posts } = await getSubredditPosts(subreddit, currentSort, 50, currentTime);
+          const musicPosts = filterMusicPosts(posts);
+          const tracks = buildQueue(musicPosts);
+
+          if (tracks.length > 0) {
+            setQueue(tracks);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Failed to load tracks";
+          setInitialLoadError(message);
+        } finally {
+          setIsInitialLoading(false);
+        }
+      };
+      fetchClientSide();
     }
-  }, [subreddit, initialQueue, setQueue]);
+  }, [subreddit, initialQueue, setQueue, searchParams, initialSort, initialTime]);
 
   const handleSortChange = useCallback(
     (sort: SortMethod, time?: TimePeriod) => {
@@ -85,7 +112,36 @@ export function SubredditView({
     }
   };
 
-  if (initialQueue.length === 0 && queue.length === 0) {
+  // Show loading state while fetching client-side
+  if (isInitialLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <Loader2 className="h-16 w-16 text-muted-foreground mb-4 animate-spin" />
+        <h2 className="text-2xl font-semibold">Loading tracks...</h2>
+        <p className="text-muted-foreground mt-2 max-w-md">
+          Fetching music from r/{subreddit}
+        </p>
+      </div>
+    );
+  }
+
+  // Show error if client-side fetch failed
+  if (initialLoadError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <Radio className="h-16 w-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold">Failed to load</h2>
+        <p className="text-muted-foreground mt-2 max-w-md">
+          {initialLoadError}
+        </p>
+        <div className="mt-6">
+          <SortSelector onSortChange={handleSortChange} />
+        </div>
+      </div>
+    );
+  }
+
+  if (queue.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <Radio className="h-16 w-16 text-muted-foreground mb-4" />
